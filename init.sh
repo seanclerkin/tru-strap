@@ -7,7 +7,7 @@ if [ ! -f /etc/sysconfig/selinux ]
   then
   sed -i 's/baseurl = http:\/\/island2.rightscale.com\/centos\/6\/os\/x86_64\/archive\/latest/baseurl = http:\/\/mirror.centos.org\/centos\/6\/os\/x86_64/g' /etc/yum.repos.d/CentOS-Base.repo
   yum install -y selinux-policy-targeted selinux-policy libselinux libselinux-python libselinux-utils policycoreutils policycoreutils-python setroubleshoot setroubleshoot-server setroubleshoot-plugins
-  rs_shutdown -r -i
+  reboot
 fi
 
 VERSION=0.0.1
