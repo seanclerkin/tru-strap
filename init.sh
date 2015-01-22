@@ -3,9 +3,10 @@
 # Usage: init.sh --role webserver --environment prod1 --site a --repouser jimfdavies --reponame provtest-config
 
 # Set selinux to enforcing before we do anything else
-if grep SELINUX=disabled /etc/sysconfig/selinux
+if [ ! -f /etc/sysconfig/selinux ]
   then
-  sed -i 's/SELINUX=disabled/SELINUX=enforcing/g' /etc/sysconfig/selinux
+  sed -i 's/baseurl = http:\/\/island2.rightscale.com\/centos\/6\/os\/x86_64\/archive\/latest/baseurl = http:\/\/mirror.centos.org\/centos\/6\/os\/x86_64/g' /etc/yum.repos.d/CentOS-Base.repo
+  yum install -y selinux-policy-targeted selinux-policy libselinux libselinux-python libselinux-utils policycoreutils policycoreutils-python setroubleshoot setroubleshoot-server setroubleshoot-plugins
   rs_shutdown -r -i
 fi
 
