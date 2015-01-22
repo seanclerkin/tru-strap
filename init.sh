@@ -2,12 +2,19 @@
 
 # Usage: init.sh --role webserver --environment prod1 --site a --repouser jimfdavies --reponame provtest-config
 
+# Set selinux to enforcing before we do anything else
+if grep SELINUX=disabled /etc/sysconfig/selinux
+  then
+  sed -i 's/SELINUX=disabled/SELINUX=enforcing/g' /etc/sysconfig/selinux
+  rs_shutdown -r -i
+fi
+
 VERSION=0.0.1
 
 if [ ${!#} == "--debug" ]
-then
+  then
   function progress_bar {
-  $@
+    $@
   }
 else
   function progress_bar {
@@ -45,63 +52,63 @@ function print_help {
 function set_facter {
   export FACTER_$1=$2
   puppet apply -e "file { '/etc/facter': ensure => directory, mode => 0600 } -> \
-                   file { '/etc/facter/facts.d': ensure => directory, mode => 0600 } -> \
-                   file { '/etc/facter/facts.d/$1.txt': ensure => present, mode => 0600, content => '$1=$2' }" --logdest syslog > /dev/null
+  file { '/etc/facter/facts.d': ensure => directory, mode => 0600 } -> \
+  file { '/etc/facter/facts.d/$1.txt': ensure => present, mode => 0600, content => '$1=$2' }" --logdest syslog > /dev/null
   echo -n "Facter says $1 is:"
   echo -e "\e[0;32m $(facter $1) \e[0m"
 }
 
 while test -n "$1"; do
   case "$1" in
-  --help|-h)
+    --help|-h)
     print_help
     exit
     ;;
-  --version|-v)
+    --version|-v)
     print_version $PROGNAME $VERSION
     exit
     ;;
-  --role|-r)
+    --role|-r)
     set_facter init_role $2
     shift
     ;;
-  --environment|-e)
+    --environment|-e)
     set_facter init_env $2
     shift
     ;;
-  --repouser|-u)
+    --repouser|-u)
     set_facter init_repouser $2
     shift
     ;;
-  --reponame|-n)
+    --reponame|-n)
     set_facter init_reponame $2
     shift
     ;;
-  --repoprivkeyfile|-k)
+    --repoprivkeyfile|-k)
     set_facter init_repoprivkeyfile $2
     shift
     ;;
-  --repobranch|-b)
+    --repobranch|-b)
     set_facter init_repobranch $2
     shift
     ;;
-  --repodir|-d)
+    --repodir|-d)
     set_facter init_repodir $2
     shift
     ;;
-  --eyamlpubkeyfile|-j)
+    --eyamlpubkeyfile|-j)
     set_facter init_eyamlpubkeyfile $2
     shift
     ;;
-  --eyamlprivkeyfile|-m)
+    --eyamlprivkeyfile|-m)
     set_facter init_eyamlprivkeyfile $2
     shift
     ;;
-  --debug)
+    --debug)
     shift
     ;;
 
-  *)
+    *)
     echo "Unknown argument: $1"
     print_help
     exit
@@ -122,9 +129,9 @@ fi
 echo "Injecting private ssh key"
 GITHUB_PRI_KEY=$(cat $FACTER_init_repoprivkeyfile)
 puppet apply -v -e "file {'ssh': path => '/root/.ssh/',ensure => directory} -> \
-                    file {'id_rsa': path => '/root/.ssh/id_rsa',ensure => present, mode    => 0600, content => '$GITHUB_PRI_KEY'} -> \
-                    file {'config': path => '/root/.ssh/config',ensure => present, mode    => 0644, content => 'StrictHostKeyChecking=no'} -> \
-                    package { 'git': ensure => present }" > /dev/null
+file {'id_rsa': path => '/root/.ssh/id_rsa',ensure => present, mode    => 0600, content => '$GITHUB_PRI_KEY'} -> \
+file {'config': path => '/root/.ssh/config',ensure => present, mode    => 0644, content => 'StrictHostKeyChecking=no'} -> \
+package { 'git': ensure => present }" > /dev/null
 
 # Set some defaults if they aren't given on the command line.
 [ -z "$FACTER_init_repobranch" ] && set_facter init_repobranch master
@@ -137,7 +144,7 @@ git clone -b $FACTER_init_repobranch git@github.com:$FACTER_init_repouser/$FACTE
 
 # Exit if the clone fails
 if [ ! -d "$FACTER_init_repodir" ]
-then
+  then
   echo "Failed to clone git@github.com:$FACTER_init_repouser/$FACTER_init_reponame.git" && exit 1
 fi
 
@@ -152,21 +159,21 @@ progress_bar gem install hiera-eyaml --no-ri --no-rdoc
 
 # If no eyaml keys have been provided, create some
 if [ -z "$FACTER_init_eyamlpubkeyfile" ] && [ -z "$FACTER_init_eyamlprivkeyfile" ] && [ ! -d "/etc/puppet/secure/keys" ]
-then
+  then
   puppet apply -v -e "file {'/etc/puppet/secure': ensure => directory, mode => 0500} -> \
-                      file {'/etc/puppet/secure/keys': ensure => directory, mode => 0500}" > /dev/null
+  file {'/etc/puppet/secure/keys': ensure => directory, mode => 0500}" > /dev/null
   cd /etc/puppet/secure
   echo -n "Creating eyaml key pair"
   progress_bar eyaml createkeys
 else
-# Or use the ones provided
+  # Or use the ones provided
   echo "Injecting eyaml keys"
   EYAML_PUB_KEY=$(cat $FACTER_init_eyamlpubkeyfile)
   EYAML_PRI_KEY=$(cat $FACTER_init_eyamlprivkeyfile)
   puppet apply -v -e "file {'/etc/puppet/secure': ensure => directory, mode => 0500} -> \
-                      file {'/etc/puppet/secure/keys': ensure => directory, mode => 0500} -> \
-                      file {'/etc/puppet/secure/keys/public_key.pkcs7.pem': ensure => present, mode => 0400, content => '$EYAML_PUB_KEY'} -> \
-                      file {'/etc/puppet/secure/keys/private_key.pkcs7.pem': ensure => present, mode => 0400, content => '$EYAML_PRI_KEY'}" > /dev/null
+  file {'/etc/puppet/secure/keys': ensure => directory, mode => 0500} -> \
+  file {'/etc/puppet/secure/keys/public_key.pkcs7.pem': ensure => present, mode => 0400, content => '$EYAML_PUB_KEY'} -> \
+  file {'/etc/puppet/secure/keys/private_key.pkcs7.pem': ensure => present, mode => 0400, content => '$EYAML_PRI_KEY'}" > /dev/null
 fi
 
 # Install and execute Librarian Puppet
